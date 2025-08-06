@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
-# re-install everything into the buildpack’s venv
+# bootstrap pip inside the buildpack venv
+python -m ensurepip --upgrade
+
+# reinstall your dependencies
 python -m pip install --no-cache-dir -r requirements.txt
 
 # hand off to your bot
