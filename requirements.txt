@@ -1,5 +1,5 @@
 requests
-solana
+solana==0.30.0
 jupiter-python
 python-dotenv
 # add any other libraries you import in your code
