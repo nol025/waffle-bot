@@ -8,7 +8,7 @@ import base64
 import requests
 from dotenv import load_dotenv
 from solana.rpc.api import Client
-from solana.keypair import Keypair
+from solders.keypair import Keypair
 from nacl.signing import SigningKey
 from solana.transaction import Transaction
 from solana.rpc.types import TxOpts

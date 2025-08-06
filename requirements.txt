@@ -2,4 +2,5 @@ requests
 solana==0.30.0
 jupiter-python
 python-dotenv
+pynacl
 # add any other libraries you import in your code
