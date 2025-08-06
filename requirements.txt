@@ -1,0 +1,5 @@
+requests
+solana
+jupiter-python
+python-dotenv
+# add any other libraries you import in your code
