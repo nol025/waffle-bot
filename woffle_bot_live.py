@@ -8,10 +8,10 @@ import base64
 import requests
 from dotenv import load_dotenv
 from solana.rpc.api import Client
-from solders.keypair import Keypair
+from solana.keypair import Keypair
+from nacl.signing import SigningKey
 from solana.transaction import Transaction
 from solana.rpc.types import TxOpts
-from solders.pubkey import Pubkey
 
 # ---------- env ----------
 load_dotenv()
@@ -27,7 +27,11 @@ STATE_FILE = "state.json"
 
 # ---------- RPC & wallet ----------
 client = Client(RPC_URL)
-wallet = Keypair.from_secret_key(bytes(json.loads(PRIVATE_KEY)))
+key_bytes = base64.b64decode(PRIVATE_KEY)
+signing_key = SigningKey(key_bytes[:32])
+wallet = Keypair.from_secret_key(signing_key.encode())
+
+
 
 # ---------- Jupiter helpers ----------
 JUP_Q = "https://quote-api.jup.ag/v6/quote"
