@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """ WOFFLE live trading bot (v3) """
 
-import os, json, time, base64, requests
+import os
+import json
+import time
+import base64
+import requests
 from dotenv import load_dotenv
 from solana.rpc.api import Client
 from solana.keypair import Keypair
@@ -15,8 +19,8 @@ PRIVATE_KEY  = os.getenv("PRIVATE_KEY")
 TOKEN_MINT   = os.getenv("TOKEN_MINT")
 QUOTE_MINT   = os.getenv("QUOTE_MINT")
 BIRDEYE_KEY  = os.getenv("BIRDEYE_API_KEY")
-SLIPPAGE     = float(os.getenv("SLIPPAGE", 1))      # 1 %
-CAP_USDC     = float(os.getenv("TRADE_SIZE_USDC", 0.01))  # 0.01 USDC per buy
+SLIPPAGE     = float(os.getenv("SLIPPAGE", 1))          # 1 %
+CAP_USDC     = float(os.getenv("TRADE_SIZE_USDC", 0.01)) # 0.01 USDC per buy
 
 STATE_FILE = "state.json"
 
@@ -28,21 +32,22 @@ wallet = Keypair.from_secret_key(bytes(json.loads(PRIVATE_KEY)))
 JUP_Q = "https://quote-api.jup.ag/v6/quote"
 JUP_S = "https://quote-api.jup.ag/v6/swap"
 
-def spl_balance(mint:str) -> int:
+def spl_balance(mint: str) -> int:
     tot = 0
-    for acc in client.get_token_accounts_by_owner(wallet.public_key, { "mint": mint })["result"]["value"]:
+    resp = client.get_token_accounts_by_owner(wallet.public_key, { "mint": mint })
+    for acc in resp["result"]["value"]:
         lamports = int(client.get_token_account_balance(acc["pubkey"])["result"]["value"]["amount"])
         tot += lamports
     return tot
 
-def jup_swap(inp:str, out:str, raw_amt:int):
+def jup_swap(inp: str, out: str, raw_amt: int):
     quote = requests.get(
         JUP_Q,
         params={
             "inputMint": inp,
             "outputMint": out,
             "amount": raw_amt,
-            "slippageBps": int(SLIPPAGE*100)
+            "slippageBps": int(SLIPPAGE * 100)
         },
         timeout=10
     ).json()
@@ -63,7 +68,11 @@ def jup_swap(inp:str, out:str, raw_amt:int):
 # ---------- Price feed ----------
 def fetch_price() -> float | None:
     url = f"https://public-api.birdeye.so/defi/price?address={TOKEN_MINT}"
-    hdr = {"accept":"application/json","x-chain":"solana","x-api-key":BIRDEYE_KEY}
+    hdr = {
+        "accept": "application/json",
+        "x-chain": "solana",
+        "x-api-key": BIRDEYE_KEY
+    }
     try:
         return float(requests.get(url, headers=hdr, timeout=10).json()["data"]["value"])
     except Exception as e:
@@ -76,16 +85,18 @@ def load_state():
         return {"last_price": None, "last_trade": None}
     return json.load(open(STATE_FILE))
 
-def save_state(st): json.dump(st, open(STATE_FILE,"w"))
+def save_state(st):
+    json.dump(st, open(STATE_FILE, "w"))
 
 # ---------- main loop ----------
 state = load_state()
-print("🚀 WOFFLE bot v3 running – polling every 30 s…")
+print("🚀 WOFFLE bot v3 running – polling every 30 s…")
 
 while True:
     price = fetch_price()
     if price is None:
-        time.sleep(30); continue
+        time.sleep(30)
+        continue
 
     lp, lt = state["last_price"], state["last_trade"]
     print(f"Price: ${price:,.8f}")
@@ -95,19 +106,27 @@ while True:
         print(f"Δ since last {lt}: {change:+.2%}")
         if lt == "buy" and change <= -0.10:
             wbal = spl_balance(TOKEN_MINT)
-            if wbal: jup_swap(TOKEN_MINT, QUOTE_MINT, wbal)
-            state.update(last_price=price, last_trade="sell"); save_state(state)
+            if wbal:
+                jup_swap(TOKEN_MINT, QUOTE_MINT, wbal)
+            state.update(last_price=price, last_trade="sell")
+            save_state(state)
+
         elif lt == "sell" and change >= 0.10:
             ubal = spl_balance(QUOTE_MINT)
-            cap_raw = int(CAP_USDC * 1_000_000)   # USDC 6‑dec
+            cap_raw = int(CAP_USDC * 1_000_000)   # USDC has 6 decimals
             amt = min(ubal, cap_raw)
-            if amt: jup_swap(QUOTE_MINT, TOKEN_MINT, amt)
-            state.update(last_price=price, last_trade="buy"); save_state(state)
+            if amt:
+                jup_swap(QUOTE_MINT, TOKEN_MINT, amt)
+            state.update(last_price=price, last_trade="buy")
+            save_state(state)
+
     elif lp is None:
         # first run: buy with cap
         ubal = spl_balance(QUOTE_MINT)
         amt  = min(ubal, int(CAP_USDC * 1_000_000))
-        if amt: jup_swap(QUOTE_MINT, TOKEN_MINT, amt)
-        state.update(last_price=price, last_trade="buy"); save_state(state)
+        if amt:
+            jup_swap(QUOTE_MINT, TOKEN_MINT, amt)
+        state.update(last_price=price, last_trade="buy")
+        save_state(state)
 
     time.sleep(30)
