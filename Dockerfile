@@ -13,3 +13,7 @@ COPY . .
 
 # 4. run your bot
 CMD ["python", "woffle_bot_live.py"]
+
+
+
+
